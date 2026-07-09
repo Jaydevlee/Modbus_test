@@ -1,0 +1,69 @@
+using Plc_Modbus.data;
+using Plc_Modbus.Model;
+using System.ComponentModel;
+
+namespace Plc_Modbus
+{
+    public partial class Form1 : Form
+    {
+        private readonly Mod_Conn _Conn = new Mod_Conn();
+        private readonly Plc_Reader plc_Reader;
+        private readonly Plc_Writer _plcWriter;
+        private BindingList<PlcDto> _readDataList;
+        private Dictionary<string, bool> cmbCoil = new Dictionary<string, bool>() { { "켜기", true }, { "끄기", false } };
+        public Form1()
+        {
+            InitializeComponent();
+            comboBoxInit();
+            btnWrite.Click += btnWrite_Click;
+            plc_Reader = new Plc_Reader(_Conn, UpdateGrid);
+            _plcWriter = new Plc_Writer(_Conn);
+            _readDataList = new BindingList<PlcDto>();
+            dgvPlc.DataSource = _readDataList;
+            this.Load += Form1_Load;
+        }
+
+        private void Form1_Load(object? sender, EventArgs? e)
+        {
+            _ = Task.Run(() => plc_Reader.ReadPlc());
+        }
+
+        private void comboBoxInit()
+        {
+            BindCoilComboBox(cmbCoil1);
+            BindCoilComboBox(cmbCoil2);
+        }
+
+        private async void btnWrite_Click(object? sender, EventArgs? e)
+        {
+           await writeCoil();
+        }
+
+        private void BindCoilComboBox(ComboBox comboBox)
+        {
+            comboBox.DataSource = new BindingSource(cmbCoil, null);
+            comboBox.DisplayMember = "key";
+            comboBox.ValueMember = "value";
+        }
+
+        private void UpdateGrid(PlcDto read)
+        {
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action<PlcDto>(UpdateGrid), read);
+                return;
+            }
+            _readDataList.Insert(0, read);
+            if (_readDataList.Count > 1000) _readDataList.RemoveAt(_readDataList.Count - 1);
+        }
+
+        private async Task writeCoil()
+        {
+            bool[] writeCoils = new bool[10];
+            writeCoils[0] = (bool)cmbCoil1.SelectedValue;
+            writeCoils[1] = (bool)cmbCoil2.SelectedValue;
+
+            await _plcWriter.writeData(writeCoils);
+        }
+    }
+}
