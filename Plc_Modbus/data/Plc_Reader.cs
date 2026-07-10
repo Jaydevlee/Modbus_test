@@ -13,6 +13,7 @@ namespace Plc_Modbus.data
         public ushort[] readData { get; private set; } = new ushort[10];
         public PlcDto latesData { get; private set; } = new PlcDto();
         private Plc_DBMapper _DBMapper = new();
+        private readonly PLC_Repository _plcRepository = new PLC_Repository();
 
         public Plc_Reader(Mod_Conn conn, Action<PlcDto> onDataGrid)
         {
@@ -42,7 +43,7 @@ namespace Plc_Modbus.data
                         // 코일 영역(비트) 읽기
                         bool[] readCoil = await _Conn.modbusMaster.ReadCoilsAsync(1, 0, 2);
                         Debug.WriteLine($"coil0: {readCoil[0]}, coil1: {readCoil[1]}");
-                        _DBMapper.CoilMapping( readCoil );
+                        var coilDtos = _DBMapper.CoilMapping( readCoil );
                         // 패킷 엉킴 방지용 미세 딜레이 
                         await Task.Delay(50);
 
@@ -50,6 +51,7 @@ namespace Plc_Modbus.data
                         ushort[] readHolding = await _Conn.modbusMaster.ReadHoldingRegistersAsync(1, 0, 3);
                         Debug.WriteLine($"holding0: {readHolding[0]}, holding1: {readHolding[1]}");
                         _DBMapper.HoldingMapping( readHolding );
+                        var holdingDtos = _DBMapper.HoldingMapping(readHolding);
                         PlcDto currentData = new PlcDto
                         {
                             coil_val1 = readCoil[0],
@@ -60,6 +62,13 @@ namespace Plc_Modbus.data
 
                         this.latesData = currentData;
                         _onDataGrid?.Invoke(currentData);
+
+                        // 데이터 db 저장
+                        var sensorData = new List<PlcDBDto>();
+                        sensorData.AddRange(coilDtos);
+                        sensorData.AddRange(holdingDtos);
+
+                        _plcRepository.InsertSensorData(sensorData);
                     }
                     finally
                     {

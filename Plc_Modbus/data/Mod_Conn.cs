@@ -1,4 +1,5 @@
 ﻿using NModbus;
+using Plc_Modbus.Model;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
