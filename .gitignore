@@ -974,4 +974,7 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
+#json file
+config.json
 # End of https://www.toptal.com/developers/gitignore/api/csharp,vs,pycharm,java,windows,intellij,python,jupyternotebooks
+
