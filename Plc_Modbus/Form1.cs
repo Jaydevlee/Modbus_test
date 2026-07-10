@@ -11,6 +11,7 @@ namespace Plc_Modbus
         private readonly Plc_Writer _plcWriter;
         private BindingList<PlcDto> _readDataList;
         private Dictionary<string, bool> cmbCoil = new Dictionary<string, bool>() { { "켜기", true }, { "끄기", false } };
+        private readonly DB_Conn _dbConn = new DB_Conn();
         public Form1()
         {
             InitializeComponent();
@@ -26,12 +27,19 @@ namespace Plc_Modbus
         private void Form1_Load(object? sender, EventArgs? e)
         {
             _ = Task.Run(() => plc_Reader.ReadPlc());
+            ConnDb();
         }
 
         private void comboBoxInit()
         {
             BindCoilComboBox(cmbCoil1);
             BindCoilComboBox(cmbCoil2);
+        }
+        
+        private void ConnDb()
+        {
+            bool result = _dbConn.connectDB();
+            if (result) lblConn.Text = "연결성공";
         }
 
         private async void btnWrite_Click(object? sender, EventArgs? e)
