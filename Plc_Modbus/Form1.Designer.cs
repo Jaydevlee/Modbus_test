@@ -32,8 +32,9 @@
             cmbCoil1 = new ComboBox();
             cmbCoil2 = new ComboBox();
             panel1 = new Panel();
-            lblCoil = new Label();
             btnWrite = new Button();
+            lblCoil = new Label();
+            lblConn = new Label();
             ((System.ComponentModel.ISupportInitialize)dgvPlc).BeginInit();
             panel1.SuspendLayout();
             SuspendLayout();
@@ -75,15 +76,6 @@
             panel1.Size = new Size(237, 165);
             panel1.TabIndex = 3;
             // 
-            // lblCoil
-            // 
-            lblCoil.AutoSize = true;
-            lblCoil.Location = new Point(871, 188);
-            lblCoil.Name = "lblCoil";
-            lblCoil.Size = new Size(84, 20);
-            lblCoil.TabIndex = 4;
-            lblCoil.Text = "스위치조절";
-            // 
             // btnWrite
             // 
             btnWrite.Location = new Point(3, 124);
@@ -93,11 +85,29 @@
             btnWrite.Text = "저장하기";
             btnWrite.UseVisualStyleBackColor = true;
             // 
+            // lblCoil
+            // 
+            lblCoil.AutoSize = true;
+            lblCoil.Location = new Point(871, 188);
+            lblCoil.Name = "lblCoil";
+            lblCoil.Size = new Size(84, 20);
+            lblCoil.TabIndex = 4;
+            lblCoil.Text = "스위치조절";
+            // 
+            // lblConn
+            // 
+            lblConn.Location = new Point(830, 430);
+            lblConn.Name = "lblConn";
+            lblConn.Size = new Size(265, 68);
+            lblConn.TabIndex = 5;
+            lblConn.Text = "label1";
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(9F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1262, 673);
+            Controls.Add(lblConn);
             Controls.Add(lblCoil);
             Controls.Add(panel1);
             Controls.Add(dgvPlc);
@@ -117,5 +127,6 @@
         private Panel panel1;
         private Label lblCoil;
         private Button btnWrite;
+        private Label lblConn;
     }
 }

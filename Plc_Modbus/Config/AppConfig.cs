@@ -6,7 +6,7 @@ namespace Plc_Modbus.Config
 {
     public class AppConfig
     {
-        public DBSettings? dbSettings { get; set; }
-        public TagSetting? tagSetting { get; set; }
+        public DBSettings? DBSettings { get; set; }
+        public TagSettings? TagSettings { get; set; }
     }
 }
