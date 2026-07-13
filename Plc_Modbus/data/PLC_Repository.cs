@@ -1,4 +1,5 @@
 ﻿using Dapper;
+using Microsoft.Win32.SafeHandles;
 using Npgsql;
 using Plc_Modbus.Model;
 using System;
@@ -22,6 +23,7 @@ namespace Plc_Modbus.data
                     string sql = @"INSERT INTO sensor_data (time, equip_id, address, metric_name, metric_value)
                             VALUES(NOW(), @Equip_id, @Address, @Metric_name, @Metric_value)";
                     conn.Execute(sql, readData);
+                    conn.Dispose();
                 }
                 catch (Exception ex)
                 {

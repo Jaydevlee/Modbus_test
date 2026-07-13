@@ -26,13 +26,14 @@ namespace Plc_Modbus.data
             List<PlcDBDto> _dbDto = new();
             foreach (var config in coilTags)
             {
-                 _dbDto.Add(new PlcDBDto
-                {
-                    Equip_id = config.Equip_Id,
-                    Address = config.Address,
-                    Metric_name = config.Metric_Name,
-                    Metric_value = readCoil[config.ArrayIndex] ? 1.0 : 0.0
-                });
+                _dbDto.Add(new PlcDBDto
+                    {
+                        Equip_id = config.Equip_Id,
+                        Address = config.Address,
+                        Metric_name = config.Metric_Name,
+                        Metric_value = readCoil[config.ArrayIndex] ? 1.0 : 0.0
+                    }
+                );
             }
             return _dbDto;
         }

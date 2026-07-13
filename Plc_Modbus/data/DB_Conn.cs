@@ -16,10 +16,12 @@ namespace Plc_Modbus.data
         
         private readonly AppConfig _appConfig = new();
 
+        private readonly CancellationTokenSource _cts = new CancellationTokenSource();
+
         public DB_Conn()
         {
             _appConfig = JsonSerializer.Deserialize<AppConfig>(File.ReadAllText("config.json"));
-            var db = _appConfig.DBSettings;
+            var db = _appConfig?.DBSettings;
             _connString = $"Host={db?.Host};" +
                           $"Port={db?.Port};" +
                           $"Username={db?.Username};" +
@@ -27,7 +29,7 @@ namespace Plc_Modbus.data
                           $"Database={db?.Database};";
         }
 
-        public bool connectDB()
+        public async Task<bool> connectDB()
         {
             try
             {
@@ -38,8 +40,9 @@ namespace Plc_Modbus.data
                     return true;
                 }
             } 
+           
             catch (Exception ex)
-            {
+            {       
                 Debug.WriteLine(ex.Message);
                 return false;
             }
@@ -47,6 +50,26 @@ namespace Plc_Modbus.data
         public NpgsqlConnection CreateConn()
         {
             return new NpgsqlConnection(_connString);
+        }
+
+        public async Task<bool> Retry()
+        {
+            while (!_cts.IsCancellationRequested)
+            {
+                if (await connectDB()) return true;
+                try
+                {
+                    await Task.Delay(2000, _cts.Token);
+                } catch(OperationCanceledException)
+                {
+                    return false;
+                }
+            }
+            return false;
+        }
+        public void Dispose()
+        {
+            _cts.Cancel();
         }
     }
 }

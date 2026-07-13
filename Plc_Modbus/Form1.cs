@@ -27,7 +27,7 @@ namespace Plc_Modbus
         private void Form1_Load(object? sender, EventArgs? e)
         {
             _ = Task.Run(() => plc_Reader.ReadPlc());
-            ConnDb();
+            _ = ConnDb();
         }
 
         private void comboBoxInit()
@@ -36,9 +36,9 @@ namespace Plc_Modbus
             BindCoilComboBox(cmbCoil2);
         }
         
-        private void ConnDb()
+        private async Task ConnDb()
         {
-            bool result = _dbConn.connectDB();
+            bool result = await _dbConn.Retry();
             if (result) lblConn.Text = "연결성공";
         }
 
@@ -72,6 +72,13 @@ namespace Plc_Modbus
             writeCoils[1] = (bool)cmbCoil2.SelectedValue;
 
             await _plcWriter.writeData(writeCoils);
+        }
+
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            _Conn.Dispose();
+            _dbConn.Dispose();
+            base.OnFormClosed(e);
         }
     }
 }
