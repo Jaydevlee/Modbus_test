@@ -18,17 +18,15 @@ namespace Plc_Modbus.data
         {
             try
             {
-                if (_Conn.PlcConnect())
+                if (_Conn.modbusMaster == null) return;
+                await _Conn._plcLock.WaitAsync();
+                try
                 {
-                    await _Conn._plcLock.WaitAsync();
-                    try
-                    {
-                      await _Conn.modbusMaster.WriteMultipleCoilsAsync(0, 0, writeCoil);
-                    }
-                    finally
-                    {
-                        _Conn._plcLock.Release();
-                    }
+                    await _Conn.modbusMaster.WriteMultipleCoilsAsync(1, 0, writeCoil);
+                }
+                finally
+                {
+                    _Conn._plcLock.Release();
                 }
             }
             catch (Exception ex)
