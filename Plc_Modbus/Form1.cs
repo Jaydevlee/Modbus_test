@@ -35,7 +35,7 @@ namespace Plc_Modbus
             BindCoilComboBox(cmbCoil1);
             BindCoilComboBox(cmbCoil2);
         }
-        
+
         private async Task ConnDb()
         {
             bool result = await _dbConn.Retry();
@@ -44,7 +44,7 @@ namespace Plc_Modbus
 
         private async void btnWrite_Click(object? sender, EventArgs? e)
         {
-           await writeCoil();
+            await writeCoil();
         }
 
         private void BindCoilComboBox(ComboBox comboBox)
@@ -72,6 +72,13 @@ namespace Plc_Modbus
             writeCoils[1] = (bool)cmbCoil2.SelectedValue;
 
             await _plcWriter.writeData(writeCoils);
+        }
+
+        private async Task writeHoding()
+        {
+            ushort[] writeHolding = new ushort[10];
+            writeHolding[0] = (ushort)txtSpeed.Text;
+            await _plcWriter.writeHolding(writeHolding);
         }
 
         protected override void OnFormClosed(FormClosedEventArgs e)

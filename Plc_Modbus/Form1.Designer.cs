@@ -35,8 +35,13 @@
             btnWrite = new Button();
             lblCoil = new Label();
             lblConn = new Label();
+            panel2 = new Panel();
+            lblSpeed = new Label();
+            txtSpeed = new TextBox();
+            btnSpeed = new Button();
             ((System.ComponentModel.ISupportInitialize)dgvPlc).BeginInit();
             panel1.SuspendLayout();
+            panel2.SuspendLayout();
             SuspendLayout();
             // 
             // dgvPlc
@@ -53,7 +58,7 @@
             // cmbCoil1
             // 
             cmbCoil1.FormattingEnabled = true;
-            cmbCoil1.Location = new Point(3, 37);
+            cmbCoil1.Location = new Point(0, 39);
             cmbCoil1.Name = "cmbCoil1";
             cmbCoil1.Size = new Size(230, 28);
             cmbCoil1.TabIndex = 1;
@@ -69,9 +74,10 @@
             // panel1
             // 
             panel1.Controls.Add(btnWrite);
+            panel1.Controls.Add(lblCoil);
             panel1.Controls.Add(cmbCoil2);
             panel1.Controls.Add(cmbCoil1);
-            panel1.Location = new Point(843, 197);
+            panel1.Location = new Point(882, 173);
             panel1.Name = "panel1";
             panel1.Size = new Size(237, 165);
             panel1.TabIndex = 3;
@@ -88,7 +94,7 @@
             // lblCoil
             // 
             lblCoil.AutoSize = true;
-            lblCoil.Location = new Point(871, 188);
+            lblCoil.Location = new Point(7, 16);
             lblCoil.Name = "lblCoil";
             lblCoil.Size = new Size(84, 20);
             lblCoil.TabIndex = 4;
@@ -96,27 +102,64 @@
             // 
             // lblConn
             // 
-            lblConn.Location = new Point(830, 430);
+            lblConn.Location = new Point(825, 47);
             lblConn.Name = "lblConn";
             lblConn.Size = new Size(265, 68);
             lblConn.TabIndex = 5;
             lblConn.Text = "label1";
+            // 
+            // panel2
+            // 
+            panel2.Controls.Add(btnSpeed);
+            panel2.Controls.Add(txtSpeed);
+            panel2.Controls.Add(lblSpeed);
+            panel2.Location = new Point(882, 384);
+            panel2.Name = "panel2";
+            panel2.Size = new Size(234, 141);
+            panel2.TabIndex = 6;
+            // 
+            // lblSpeed
+            // 
+            lblSpeed.AutoSize = true;
+            lblSpeed.Location = new Point(7, 12);
+            lblSpeed.Name = "lblSpeed";
+            lblSpeed.Size = new Size(84, 20);
+            lblSpeed.TabIndex = 5;
+            lblSpeed.Text = "스위치조절";
+            // 
+            // txtSpeed
+            // 
+            txtSpeed.Location = new Point(16, 40);
+            txtSpeed.Name = "txtSpeed";
+            txtSpeed.Size = new Size(208, 27);
+            txtSpeed.TabIndex = 6;
+            // 
+            // btnSpeed
+            // 
+            btnSpeed.Location = new Point(16, 82);
+            btnSpeed.Name = "btnSpeed";
+            btnSpeed.Size = new Size(83, 30);
+            btnSpeed.TabIndex = 5;
+            btnSpeed.Text = "저장하기";
+            btnSpeed.UseVisualStyleBackColor = true;
             // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(9F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1262, 673);
+            Controls.Add(panel2);
             Controls.Add(lblConn);
-            Controls.Add(lblCoil);
             Controls.Add(panel1);
             Controls.Add(dgvPlc);
             Name = "Form1";
             Text = "Form1";
             ((System.ComponentModel.ISupportInitialize)dgvPlc).EndInit();
             panel1.ResumeLayout(false);
+            panel1.PerformLayout();
+            panel2.ResumeLayout(false);
+            panel2.PerformLayout();
             ResumeLayout(false);
-            PerformLayout();
         }
 
         #endregion
@@ -128,5 +171,9 @@
         private Label lblCoil;
         private Button btnWrite;
         private Label lblConn;
+        private Panel panel2;
+        private Button btnSpeed;
+        private TextBox txtSpeed;
+        private Label lblSpeed;
     }
 }
