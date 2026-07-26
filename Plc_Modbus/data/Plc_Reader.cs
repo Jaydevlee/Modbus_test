@@ -53,6 +53,9 @@ namespace Plc_Modbus.data
                             ushort[] readHolding = await _Conn.modbusMaster.ReadHoldingRegistersAsync(1, 0, 3);
                             Debug.WriteLine($"holding0: {readHolding[0]}, holding1: {readHolding[1]}");
                             var holdingDtos = _DBMapper.HoldingMapping(readHolding);
+
+                            // Input Register 읽기
+                            ushort[] readInput = await _Conn.modbusMaster.ReadInputRegistersAsync(1, 0, 2);
                             PlcDto currentData = new PlcDto
                             {
                                 coil_val1 = readCoil[0],

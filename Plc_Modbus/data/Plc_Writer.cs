@@ -35,5 +35,26 @@ namespace Plc_Modbus.data
             }
         }
 
+        public async Task writeHolding(ushort[] holdingData) 
+        {
+            try
+            {
+                if (_Conn.modbusMaster == null) return;
+                await _Conn._plcLock.WaitAsync();
+                try
+                {
+                    await _Conn.modbusMaster.WriteSingleRegisterAsync(1, 0, holdingData[0]);
+                }
+                finally
+                {
+                    _Conn._plcLock.Release();
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"오류발생: {ex.Message}");
+            }
+        }
+
     }
 }
