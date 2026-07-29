@@ -13,12 +13,14 @@ namespace Plc_Modbus.data
         private AppConfig _appConfig = new AppConfig();
         private List<TagSetting> coilTags;
         private List<TagSetting> holdingTags;
+        private List<TagSetting> inputTags;
 
         public Plc_DBMapper()
         {
             _appConfig = JsonSerializer.Deserialize<AppConfig>(File.ReadAllText("config.json"));
             coilTags = _appConfig.TagSettings.CoilTag ?? new List<TagSetting>();
             holdingTags = _appConfig.TagSettings.HoldingTag ?? new List<TagSetting>();
+            inputTags = _appConfig.TagSettings.InputTag ?? new List<TagSetting>();
         }
 
         public List<PlcDBDto> CoilMapping(bool[] readCoil)
@@ -52,6 +54,21 @@ namespace Plc_Modbus.data
                 });
             }
             return _dbDto;
+        }
+
+        public List<PlcDBDto> InputMapping(ushort[] readInput) 
+        {
+            List<PlcDBDto> _dbDto = new();
+            foreach (var config in inputTags)
+            {
+                _dbDto.Add(new PlcDBDto
+                {
+                    Equip_id = config.Equip_Id,
+                    Address = config.Address,
+                    Metric_name = config.Metric_Name,
+                    Metric_value = readInput[config.ArrayIndex]
+                });
+            } return _dbDto;
         }
     }
 }

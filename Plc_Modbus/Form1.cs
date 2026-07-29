@@ -17,6 +17,7 @@ namespace Plc_Modbus
             InitializeComponent();
             comboBoxInit();
             btnWrite.Click += btnWrite_Click;
+            btnSpeed.Click += btnSpeed_Click;
             plc_Reader = new Plc_Reader(_Conn, UpdateGrid);
             _plcWriter = new Plc_Writer(_Conn);
             _readDataList = new BindingList<PlcDto>();
@@ -47,6 +48,11 @@ namespace Plc_Modbus
             await writeCoil();
         }
 
+        private async void btnSpeed_Click(object? sender, EventArgs? e)
+        {
+            await writeHoding();
+        }
+
         private void BindCoilComboBox(ComboBox comboBox)
         {
             comboBox.DataSource = new BindingSource(cmbCoil, null);
@@ -67,7 +73,7 @@ namespace Plc_Modbus
 
         private async Task writeCoil()
         {
-            bool[] writeCoils = new bool[10];
+            bool[] writeCoils = new bool[2];
             writeCoils[0] = (bool)cmbCoil1.SelectedValue;
             writeCoils[1] = (bool)cmbCoil2.SelectedValue;
 
@@ -77,7 +83,7 @@ namespace Plc_Modbus
         private async Task writeHoding()
         {
             ushort[] writeHolding = new ushort[10];
-            writeHolding[0] = (ushort)txtSpeed.Text;
+            writeHolding[0] = (ushort)(ushort.Parse(txtSpeed.Text) * 10);
             await _plcWriter.writeHolding(writeHolding);
         }
 

@@ -36,9 +36,9 @@
             lblCoil = new Label();
             lblConn = new Label();
             panel2 = new Panel();
-            lblSpeed = new Label();
-            txtSpeed = new TextBox();
             btnSpeed = new Button();
+            txtSpeed = new TextBox();
+            lblSpeed = new Label();
             ((System.ComponentModel.ISupportInitialize)dgvPlc).BeginInit();
             panel1.SuspendLayout();
             panel2.SuspendLayout();
@@ -118,22 +118,6 @@
             panel2.Size = new Size(234, 141);
             panel2.TabIndex = 6;
             // 
-            // lblSpeed
-            // 
-            lblSpeed.AutoSize = true;
-            lblSpeed.Location = new Point(7, 12);
-            lblSpeed.Name = "lblSpeed";
-            lblSpeed.Size = new Size(84, 20);
-            lblSpeed.TabIndex = 5;
-            lblSpeed.Text = "스위치조절";
-            // 
-            // txtSpeed
-            // 
-            txtSpeed.Location = new Point(16, 40);
-            txtSpeed.Name = "txtSpeed";
-            txtSpeed.Size = new Size(208, 27);
-            txtSpeed.TabIndex = 6;
-            // 
             // btnSpeed
             // 
             btnSpeed.Location = new Point(16, 82);
@@ -142,6 +126,22 @@
             btnSpeed.TabIndex = 5;
             btnSpeed.Text = "저장하기";
             btnSpeed.UseVisualStyleBackColor = true;
+            // 
+            // txtSpeed
+            // 
+            txtSpeed.Location = new Point(16, 40);
+            txtSpeed.Name = "txtSpeed";
+            txtSpeed.Size = new Size(208, 27);
+            txtSpeed.TabIndex = 6;
+            // 
+            // lblSpeed
+            // 
+            lblSpeed.AutoSize = true;
+            lblSpeed.Location = new Point(7, 12);
+            lblSpeed.Name = "lblSpeed";
+            lblSpeed.Size = new Size(74, 20);
+            lblSpeed.TabIndex = 5;
+            lblSpeed.Text = "속도 조절";
             // 
             // Form1
             // 

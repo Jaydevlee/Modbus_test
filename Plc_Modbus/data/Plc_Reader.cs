@@ -50,18 +50,22 @@ namespace Plc_Modbus.data
                             await Task.Delay(50);
 
                             // 홀딩 영역(워드) 읽기
-                            ushort[] readHolding = await _Conn.modbusMaster.ReadHoldingRegistersAsync(1, 0, 3);
-                            Debug.WriteLine($"holding0: {readHolding[0]}, holding1: {readHolding[1]}");
+                            ushort[] readHolding = await _Conn.modbusMaster.ReadHoldingRegistersAsync(1, 0, 1);
+                            Debug.WriteLine($"holding0: {readHolding[0]}");
                             var holdingDtos = _DBMapper.HoldingMapping(readHolding);
 
                             // Input Register 읽기
                             ushort[] readInput = await _Conn.modbusMaster.ReadInputRegistersAsync(1, 0, 2);
+                            Debug.WriteLine($"input0: {readInput[0]}, input1: {readInput[1]}");
+                            var inputDtos = _DBMapper.InputMapping(readInput);
+
                             PlcDto currentData = new PlcDto
                             {
                                 coil_val1 = readCoil[0],
                                 coil_val2 = readCoil[1],
-                                hold_val1 = readHolding[0],
-                                hold_val2 = readHolding[1]
+                                hold_val = readHolding[0],
+                                input_val1 = readInput[0],
+                                input_val2 = readInput[1]
                             };
 
                             this.latesData = currentData;
@@ -71,6 +75,7 @@ namespace Plc_Modbus.data
                             var sensorData = new List<PlcDBDto>();
                             sensorData.AddRange(coilDtos);
                             sensorData.AddRange(holdingDtos);
+                            sensorData.AddRange(inputDtos);
 
                             _plcRepository.InsertSensorData(sensorData);
                         }
