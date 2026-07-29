@@ -8,5 +8,6 @@ namespace Plc_Modbus.Config
     {
         public List<TagSetting>? CoilTag { get; set; }
         public List<TagSetting>? HoldingTag { get; set; }
+        public List<TagSetting>? InputTag { get; set; }
     }
 }
