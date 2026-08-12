@@ -6,92 +6,181 @@ namespace Plc_Modbus
 {
     public partial class Form1 : Form
     {
-        private readonly Mod_Conn _Conn = new Mod_Conn();
-        private readonly Plc_Reader plc_Reader;
+        private readonly Mod_Conn _connection = new();
+        private readonly Plc_Reader _plcReader;
         private readonly Plc_Writer _plcWriter;
-        private BindingList<PlcDto> _readDataList;
-        private Dictionary<string, bool> cmbCoil = new Dictionary<string, bool>() { { "켜기", true }, { "끄기", false } };
-        private readonly DB_Conn _dbConn = new DB_Conn();
+        private readonly DB_Conn _dbConnection = new();
+        private readonly CancellationTokenSource _formCts = new();
+        private readonly BindingList<PlcDto> _readDataList = [];
+        private readonly Dictionary<string, bool> _coilOptions = new()
+        {
+            { "켜기", true },
+            { "끄기", false }
+        };
+
+        private Task? _readerTask;
+        private bool _shutdownComplete;
+
         public Form1()
         {
             InitializeComponent();
-            comboBoxInit();
-            btnWrite.Click += btnWrite_Click;
-            btnSpeed.Click += btnSpeed_Click;
-            plc_Reader = new Plc_Reader(_Conn, UpdateGrid);
-            _plcWriter = new Plc_Writer(_Conn);
-            _readDataList = new BindingList<PlcDto>();
+            InitializeControls();
+
+            _plcReader = new Plc_Reader(
+                _connection,
+                UpdateGrid,
+                UpdatePlcConnectionState);
+            _plcWriter = new Plc_Writer(_connection);
             dgvPlc.DataSource = _readDataList;
-            this.Load += Form1_Load;
+
+            Load += Form1_Load;
+            btnWrite.Click += btnWrite_Click;
         }
 
-        private void Form1_Load(object? sender, EventArgs? e)
-        {
-            _ = Task.Run(() => plc_Reader.ReadPlc());
-            _ = ConnDb();
-        }
-
-        private void comboBoxInit()
+        private void InitializeControls()
         {
             BindCoilComboBox(cmbCoil1);
             BindCoilComboBox(cmbCoil2);
+
+            // Holding Register 40001 is now the read-only production count.
+            btnSpeed.Enabled = false;
+            txtSpeed.Enabled = false;
+            btnSpeed.Text = "사용 안 함";
+            lblSpeed.Text = "생산수량은 PLC에서 자동 증가";
+            lblConn.Text = "DB 연결 확인 중";
         }
 
-        private async Task ConnDb()
+        private void Form1_Load(object? sender, EventArgs e)
         {
-            bool result = await _dbConn.Retry();
-            if (result) lblConn.Text = "연결성공";
+            _readerTask = _plcReader.ReadPlcAsync(_formCts.Token);
+            _ = ConnectDbAsync();
         }
 
-        private async void btnWrite_Click(object? sender, EventArgs? e)
+        private async Task ConnectDbAsync()
         {
-            await writeCoil();
+            try
+            {
+                bool connected = await _dbConnection.Retry(_formCts.Token);
+                if (connected && !IsDisposed)
+                {
+                    SetLabelText(lblConn, "DB 연결 성공");
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Normal application shutdown.
+            }
         }
 
-        private async void btnSpeed_Click(object? sender, EventArgs? e)
+        private async void btnWrite_Click(object? sender, EventArgs e)
         {
-            await writeHoding();
+            if (cmbCoil1.SelectedValue is not bool runCommand
+                || cmbCoil2.SelectedValue is not bool forceError)
+            {
+                MessageBox.Show("RUN과 ERROR 명령을 선택해주세요.");
+                return;
+            }
+
+            btnWrite.Enabled = false;
+            try
+            {
+                bool success = await _plcWriter.WriteCommandsAsync(
+                    runCommand, forceError, _formCts.Token);
+                if (!success && !_formCts.IsCancellationRequested)
+                {
+                    MessageBox.Show("PLC 명령 전송에 실패했습니다.");
+                }
+            }
+            finally
+            {
+                if (!_formCts.IsCancellationRequested)
+                    btnWrite.Enabled = true;
+            }
         }
 
         private void BindCoilComboBox(ComboBox comboBox)
         {
-            comboBox.DataSource = new BindingSource(cmbCoil, null);
-            comboBox.DisplayMember = "key";
-            comboBox.ValueMember = "value";
+            comboBox.DataSource = new BindingSource { DataSource = _coilOptions };
+            comboBox.DisplayMember = "Key";
+            comboBox.ValueMember = "Value";
         }
 
-        private void UpdateGrid(PlcDto read)
+        private void UpdateGrid(PlcDto data)
         {
-            if (this.InvokeRequired)
+            if (IsDisposed || Disposing)
+                return;
+
+            if (InvokeRequired)
             {
-                this.Invoke(new Action<PlcDto>(UpdateGrid), read);
+                BeginInvoke(new Action<PlcDto>(UpdateGrid), data);
                 return;
             }
-            _readDataList.Insert(0, read);
-            if (_readDataList.Count > 1000) _readDataList.RemoveAt(_readDataList.Count - 1);
+
+            _readDataList.Insert(0, data);
+            if (_readDataList.Count > 1000)
+                _readDataList.RemoveAt(_readDataList.Count - 1);
         }
 
-        private async Task writeCoil()
+        private void UpdatePlcConnectionState(bool connected)
         {
-            bool[] writeCoils = new bool[2];
-            writeCoils[0] = (bool)cmbCoil1.SelectedValue;
-            writeCoils[1] = (bool)cmbCoil2.SelectedValue;
+            if (IsDisposed || Disposing)
+                return;
 
-            await _plcWriter.writeData(writeCoils);
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action<bool>(UpdatePlcConnectionState), connected);
+                return;
+            }
+
+            Text = connected
+                ? "Mini MES Collector - PLC ONLINE"
+                : "Mini MES Collector - PLC DISCONNECTED";
         }
 
-        private async Task writeHoding()
+        private void SetLabelText(Label label, string text)
         {
-            ushort[] writeHolding = new ushort[10];
-            writeHolding[0] = (ushort)(ushort.Parse(txtSpeed.Text) * 10);
-            await _plcWriter.writeHolding(writeHolding);
+            if (IsDisposed || Disposing)
+                return;
+
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action<Label, string>(SetLabelText), label, text);
+                return;
+            }
+
+            label.Text = text;
         }
 
-        protected override void OnFormClosed(FormClosedEventArgs e)
+        protected override async void OnFormClosing(FormClosingEventArgs e)
         {
-            _Conn.Dispose();
-            _dbConn.Dispose();
-            base.OnFormClosed(e);
+            if (_shutdownComplete)
+            {
+                base.OnFormClosing(e);
+                return;
+            }
+
+            e.Cancel = true;
+            Enabled = false;
+            _formCts.Cancel();
+            _dbConnection.Dispose();
+
+            if (_readerTask is not null)
+            {
+                try
+                {
+                    await _readerTask;
+                }
+                catch (OperationCanceledException)
+                {
+                    // Normal application shutdown.
+                }
+            }
+
+            _plcReader.Dispose();
+            _connection.Dispose();
+            _formCts.Dispose();
+            _shutdownComplete = true;
+            Close();
         }
     }
 }

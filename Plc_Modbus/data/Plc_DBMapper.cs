@@ -1,74 +1,57 @@
-﻿using Plc_Modbus.Config;
+using Plc_Modbus.Config;
 using Plc_Modbus.Model;
-using System;
-using System.CodeDom;
-using System.Collections.Generic;
-using System.Text;
-using System.Text.Json;
 
 namespace Plc_Modbus.data
 {
     public class Plc_DBMapper
     {
-        private AppConfig _appConfig = new AppConfig();
-        private List<TagSetting> coilTags;
-        private List<TagSetting> holdingTags;
-        private List<TagSetting> inputTags;
+        private readonly IReadOnlyList<TagSetting> _holdingTags;
 
         public Plc_DBMapper()
         {
-            _appConfig = JsonSerializer.Deserialize<AppConfig>(File.ReadAllText("config.json"));
-            coilTags = _appConfig.TagSettings.CoilTag ?? new List<TagSetting>();
-            holdingTags = _appConfig.TagSettings.HoldingTag ?? new List<TagSetting>();
-            inputTags = _appConfig.TagSettings.InputTag ?? new List<TagSetting>();
+            AppConfig config = AppConfigLoader.Load();
+            _holdingTags = config.TagSettings?.HoldingTag ?? [];
         }
 
-        public List<PlcDBDto> CoilMapping(bool[] readCoil)
+        public List<PlcDBDto> HoldingMapping(ushort[] registers)
         {
-            List<PlcDBDto> _dbDto = new();
-            foreach (var config in coilTags)
+            List<PlcDBDto> result = [];
+            foreach (TagSetting tag in _holdingTags.Where(tag => tag.Enabled))
             {
-                _dbDto.Add(new PlcDBDto
-                    {
-                        Equip_id = config.Equip_Id,
-                        Address = config.Address,
-                        Metric_name = config.Metric_Name,
-                        Metric_value = readCoil[config.ArrayIndex] ? 1.0 : 0.0
-                    }
-                );
-            }
-            return _dbDto;
-        }
-
-        public List<PlcDBDto> HoldingMapping(ushort[] readHolding)
-        {
-            List<PlcDBDto> _dbDto = new();
-            foreach (var config in holdingTags)
-            {
-                _dbDto.Add(new PlcDBDto
+                double rawValue = ReadRawValue(registers, tag);
+                result.Add(new PlcDBDto
                 {
-                    Equip_id = config.Equip_Id,
-                    Address = config.Address,
-                    Metric_name = config.Metric_Name,
-                    Metric_value = readHolding[config.ArrayIndex]
+                    Equip_id = tag.Equip_Id,
+                    Address = tag.Address,
+                    Metric_name = tag.Metric_Name,
+                    Metric_value = rawValue * tag.Scale
                 });
             }
-            return _dbDto;
+
+            return result;
         }
 
-        public List<PlcDBDto> InputMapping(ushort[] readInput) 
+        private static double ReadRawValue(ushort[] registers, TagSetting tag)
         {
-            List<PlcDBDto> _dbDto = new();
-            foreach (var config in inputTags)
+            if (tag.ArrayIndex < 0 || tag.ArrayIndex >= registers.Length)
             {
-                _dbDto.Add(new PlcDBDto
+                throw new InvalidOperationException(
+                    $"태그 {tag.Metric_Name}의 ArrayIndex가 읽기 범위를 벗어났습니다.");
+            }
+
+            if (tag.DataType.Equals("UInt32", StringComparison.OrdinalIgnoreCase))
+            {
+                if (tag.ArrayIndex + 1 >= registers.Length)
                 {
-                    Equip_id = config.Equip_Id,
-                    Address = config.Address,
-                    Metric_name = config.Metric_Name,
-                    Metric_value = readInput[config.ArrayIndex]
-                });
-            } return _dbDto;
+                    throw new InvalidOperationException(
+                        $"UInt32 태그 {tag.Metric_Name}에는 레지스터 2개가 필요합니다.");
+                }
+
+                return ((uint)registers[tag.ArrayIndex] << 16)
+                       | registers[tag.ArrayIndex + 1];
+            }
+
+            return registers[tag.ArrayIndex];
         }
     }
 }

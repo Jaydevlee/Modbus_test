@@ -1,75 +1,75 @@
-﻿using Microsoft.Win32.SafeHandles;
 using Npgsql;
 using Plc_Modbus.Config;
-using Plc_Modbus.Model;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Text;
-using System.Text.Json;
 
 namespace Plc_Modbus.data
 {
-    public class DB_Conn
+    public sealed class DB_Conn : IDisposable
     {
-        private readonly string? _connString = null;
-        
-        private readonly AppConfig _appConfig = new();
-
-        private readonly CancellationTokenSource _cts = new CancellationTokenSource();
+        private readonly string _connectionString;
+        private readonly CancellationTokenSource _cts = new();
 
         public DB_Conn()
         {
-            _appConfig = JsonSerializer.Deserialize<AppConfig>(File.ReadAllText("config.json"));
-            var db = _appConfig?.DBSettings;
-            _connString = $"Host={db?.Host};" +
-                          $"Port={db?.Port};" +
-                          $"Username={db?.Username};" +
-                          $"Password={db?.Password};" +
-                          $"Database={db?.Database};";
+            DBSettings db = AppConfigLoader.Load().DBSettings
+                ?? throw new InvalidOperationException("DBSettings가 필요합니다.");
+
+            var builder = new NpgsqlConnectionStringBuilder
+            {
+                Host = db.Host,
+                Port = int.TryParse(db.Port, out int port) ? port : 5432,
+                Username = db.Username,
+                Password = db.Password,
+                Database = db.Database,
+                Timeout = 3,
+                CommandTimeout = 5
+            };
+            _connectionString = builder.ConnectionString;
         }
 
-        public async Task<bool> connectDB()
+        public async Task<bool> ConnectDbAsync(CancellationToken cancellationToken)
         {
             try
             {
-                using (var conn = new NpgsqlConnection(_connString))
-                {
-                    conn.Open();
-                    Debug.WriteLine("연결성공");
-                    return true;
-                }
-            } 
-           
+                await using var connection = CreateConn();
+                await connection.OpenAsync(cancellationToken);
+                Debug.WriteLine("[DB] 연결 성공");
+                return true;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (Exception ex)
-            {       
-                Debug.WriteLine(ex.Message);
+            {
+                Debug.WriteLine($"[DB] 연결 실패: {ex.Message}");
                 return false;
             }
         }
-        public NpgsqlConnection CreateConn()
-        {
-            return new NpgsqlConnection(_connString);
-        }
 
-        public async Task<bool> Retry()
+        public NpgsqlConnection CreateConn() => new(_connectionString);
+
+        public async Task<bool> Retry(CancellationToken cancellationToken = default)
         {
-            while (!_cts.IsCancellationRequested)
+            using CancellationTokenSource linkedCts =
+                CancellationTokenSource.CreateLinkedTokenSource(
+                    cancellationToken, _cts.Token);
+
+            while (!linkedCts.Token.IsCancellationRequested)
             {
-                if (await connectDB()) return true;
-                try
-                {
-                    await Task.Delay(2000, _cts.Token);
-                } catch(OperationCanceledException)
-                {
-                    return false;
-                }
+                if (await ConnectDbAsync(linkedCts.Token))
+                    return true;
+
+                await Task.Delay(2000, linkedCts.Token);
             }
+
             return false;
         }
+
         public void Dispose()
         {
             _cts.Cancel();
+            _cts.Dispose();
         }
     }
 }

@@ -1,35 +1,52 @@
-﻿using Dapper;
-using Microsoft.Win32.SafeHandles;
-using Npgsql;
+using Dapper;
 using Plc_Modbus.Model;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Text;
 
 namespace Plc_Modbus.data
 {
-    public class PLC_Repository
+    public sealed class PLC_Repository : IDisposable
     {
-        private readonly DB_Conn _Conn = new DB_Conn();
+        private readonly DB_Conn _connectionFactory = new();
 
-        public void InsertSensorData(List<PlcDBDto> readData)
+        public async Task<bool> InsertSensorDataAsync(
+            IReadOnlyCollection<PlcDBDto> sensorData,
+            CancellationToken cancellationToken)
         {
-            using (var conn = _Conn.CreateConn())
+            if (sensorData.Count == 0)
+                return true;
+
+            const string sql = """
+                INSERT INTO sensor_data
+                    (time, equip_id, address, metric_name, metric_value, unit, quality, source_time, collected_at)
+                VALUES
+                    (NOW(), @Equip_id, @Address, @Metric_name, @Metric_value, @Unit, @Quality, @Source_time, @Collected_at)
+                """;
+
+            try
             {
-                try
-                {
-                    conn.Open();
-                    string sql = @"INSERT INTO sensor_data (time, equip_id, address, metric_name, metric_value)
-                            VALUES(NOW(), @Equip_id, @Address, @Metric_name, @Metric_value)";
-                    conn.Execute(sql, readData);
-                    conn.Dispose();
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine(ex.Message);
-                }
+                await using var connection = _connectionFactory.CreateConn();
+                await connection.OpenAsync(cancellationToken);
+                var command = new CommandDefinition(
+                    sql,
+                    sensorData,
+                    cancellationToken: cancellationToken);
+                await connection.ExecuteAsync(command);
+                return true;
             }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[DB] 센서 데이터 저장 실패: {ex.Message}");
+                return false;
+            }
+        }
+
+        public void Dispose()
+        {
+            _connectionFactory.Dispose();
         }
     }
 }

@@ -1,78 +1,241 @@
-import asyncio # 비동기 처리 (기본내장)
-import random # 랜덤값 생성 (기본내장)
-from pymodbus.server import StartAsyncTcpServer 
+import argparse
+import asyncio
+import random
+import time
+
 from pymodbus.datastore import (
-    ModbusSlaveContext, # plc 1대의 메모리 공간
-    ModbusServerContext, # 여러 PLC를 묶는 컨테이너
-    ModbusSequentialDataBlock # 실제 메모리 블록
+    ModbusSequentialDataBlock,
+    ModbusServerContext,
+    ModbusSlaveContext,
 )
-from pymodbus.server import StartAsyncTcpServer # Modbus TCP를 여는 함수
+from pymodbus.server import StartAsyncTcpServer
 
+
+# Holding Register map (display address -> zero-based offset)
+PRODUCTION_COUNT = 0      # 40001, EA
+EQUIPMENT_STATUS = 1      # 40002, 0=STOP, 1=RUN, 2=ERROR
+CYCLE_TIME = 2            # 40003, raw / 100 = seconds
+ALARM_CODE = 3            # 40004, 0=normal
+VISION_RESULT = 4         # 40005, 0=not inspected, 1=OK, 2=NG
+VISION_EVENT_SEQUENCE = 5 # 40006, increments on every inspection
+TEMPERATURE = 9           # 40010, raw / 10 = degrees Celsius
+PRESSURE = 10             # 40011, raw / 100 = bar
+CURRENT = 11              # 40012, raw / 10 = A
+INSTANT_POWER = 12        # 40013, raw / 100 = kW
+ENERGY_HIGH_WORD = 13     # 40014, accumulated energy high word
+ENERGY_LOW_WORD = 14      # 40015, accumulated energy low word, raw / 100 = kWh
+
+STOP = 0
+RUN = 1
+ERROR = 2
+
+NOT_INSPECTED = 0
+OK = 1
+NG = 2
+
+NO_ALARM = 0
+FORCED_ERROR_ALARM = 1001
+
+REGISTER_COUNT = 20
+POLL_INTERVAL_SECONDS = 0.25
+METRIC_INTERVAL_SECONDS = 1.0
+PRODUCTION_INTERVAL_SECONDS = 2.0
+
+
+# Coil 00001(offset 0): RUN command, Coil 00002(offset 1): force ERROR.
+# Input Register 30001~30002 mirrors temperature/pressure for the existing
+# WinForms collector while it is migrated to the guide's Holding Register map.
 store = ModbusSlaveContext(
-    co=ModbusSequentialDataBlock(0, [0]*10),
-    di=ModbusSequentialDataBlock(0, [0]*10),
-    hr=ModbusSequentialDataBlock(0, [0]*10),
-    ir=ModbusSequentialDataBlock(0, [0]*10),
-    # zero_mode=False(기본값)면 pymodbus가 와이어 주소에 +1을 해서 저장소에 접근함
-    # (예: 클라이언트가 주소 0에 쓰면 실제로는 raw 1번에 저장)
-    # generate_sensor_data()는 store 블록에 오프셋 없이 직접 접근하므로 어긋남 -> True로 고정
-    zero_mode=True
+    co=ModbusSequentialDataBlock(0, [0] * 10),
+    di=ModbusSequentialDataBlock(0, [0] * 10),
+    hr=ModbusSequentialDataBlock(0, [0] * REGISTER_COUNT),
+    ir=ModbusSequentialDataBlock(0, [0] * REGISTER_COUNT),
+    zero_mode=True,
 )
+context = ModbusServerContext(slaves=store, single=True)
 
-context = ModbusServerContext(slaves=store, single=True) # ModbusServerContext = 여러 PLC를 관리하는 컨테이너, single=True 일 때는 PLC가 1대
 
-async def generate_sensor_data():
-    while True:
-        # 0번 슬레이브(PLC) 선택
-        # single=True 면 항상 0번
+def clamp(value: float, minimum: float, maximum: float) -> float:
+    return max(minimum, min(value, maximum))
 
-        # 만약 PLC 여러 대라면
-        # context[1] → 1번 PLC
-        # context[2] → 2번 PLC
-        holding_registers = context[0].store['h'] # Holding Register 메모리 블록만 꺼내오기
-        input_registers = context[0].store['i']
-        motor = context[0].store['c'].getValues(0, 1)[0];
-        error = context[0].store['c'].getValues(1, 1)[0];
-        speed = holding_registers.getValues(0, 1)[0] / 10
 
-        if(motor == True and speed != 0.0):
-            temperature = round(random.uniform(20.0, 80.0), 1)
-            pressure = round(random.uniform(1.0, 5.0), 1)
-            # modbus에 소숫점 값 저장 시
-            # Modbus는 정수만 저장 가능하여 -> 10배 곱해서 저장
-            # 예) 온도 78.5 -> 785 읽을 때 10으로 나눔
-            input_registers.setValues(0, [int(temperature * 10)])
-            input_registers.setValues(1, [int(pressure * 10)])
-        else:
-            temperature = 0
-            pressure = 0
-            speed = 0.0
-            holding_registers.setValues(0, [0])
-            input_registers.setValues(0, [int(temperature * 10)])
-            input_registers.setValues(1, [int(pressure * 10)])
+def split_uint32(value: int) -> tuple[int, int]:
+    """Return a 32-bit value in high-word, low-word order."""
+    value &= 0xFFFFFFFF
+    return (value >> 16) & 0xFFFF, value & 0xFFFF
 
-        if(error == True):
-            temperature = 0
-            pressure = 0
-            speed = 0.0
-            # float(0.0)을 넣으면 나중에 C#이 이 레지스터를 읽을 때
-            # 서버가 16비트 정수로 인코딩하다 실패해서 응답을 못 주고 타임아웃남 -> 정수 리스트로 저장
-            holding_registers.setValues(0, [0])
-            motor = False
-            context[0].store['c'].setValues(0, [False])
 
-        print(f"[PLC] 온도: {temperature}°C | 압력: {pressure}bar | " 
-            f" 속도: {speed}rpm | 모터: {'on' if motor else 'off'} | 에러: {'error' if error else 'none'}")
-        await asyncio.sleep(1)
-        
-async def main():
-    print("가상 PLC 서버 시작 - localhost:502")
-    await asyncio.gather(
-        StartAsyncTcpServer(context, address=("localhost", 502)),
-        generate_sensor_data()
+def set_holding(offset: int, value: int) -> None:
+    context[0].store["h"].setValues(offset, [value & 0xFFFF])
+
+
+def get_coil(offset: int) -> bool:
+    return bool(context[0].store["c"].getValues(offset, 1)[0])
+
+
+def set_sensor_registers(
+    temperature: float,
+    pressure: float,
+    current: float,
+    power: float,
+    accumulated_energy: float,
+) -> None:
+    temperature_raw = int(round(temperature * 10))
+    pressure_raw = int(round(pressure * 100))
+    current_raw = int(round(current * 10))
+    power_raw = int(round(power * 100))
+    energy_raw = int(round(accumulated_energy * 100))
+    energy_high, energy_low = split_uint32(energy_raw)
+
+    holding = context[0].store["h"]
+    holding.setValues(TEMPERATURE, [temperature_raw])
+    holding.setValues(PRESSURE, [pressure_raw])
+    holding.setValues(CURRENT, [current_raw])
+    holding.setValues(INSTANT_POWER, [power_raw])
+    holding.setValues(ENERGY_HIGH_WORD, [energy_high, energy_low])
+
+    # Temporary compatibility mirror for the current WinForms implementation.
+    input_registers = context[0].store["i"]
+    input_registers.setValues(0, [temperature_raw])
+    input_registers.setValues(1, [int(round(pressure * 10))])
+
+
+async def generate_factory_data() -> None:
+    production_count = 0
+    vision_sequence = 0
+    accumulated_energy = 0.0
+    temperature = 24.0
+    pressure = 0.0
+    current = 0.0
+    power = 0.0
+
+    previous_status = STOP
+    last_metric_at = time.monotonic()
+    last_production_at = time.monotonic()
+    last_loop_at = time.monotonic()
+
+    set_holding(PRODUCTION_COUNT, production_count)
+    set_holding(EQUIPMENT_STATUS, STOP)
+    set_holding(CYCLE_TIME, 0)
+    set_holding(ALARM_CODE, NO_ALARM)
+    set_holding(VISION_RESULT, NOT_INSPECTED)
+    set_holding(VISION_EVENT_SEQUENCE, vision_sequence)
+    set_sensor_registers(
+        temperature, pressure, current, power, accumulated_energy
     )
 
-# __name__: 현재 모듈의 이름을 담고 있는 내장 변수
-# 모듈의 직접 실행 여부 판단
+    while True:
+        now = time.monotonic()
+        elapsed_seconds = now - last_loop_at
+        last_loop_at = now
+
+        run_command = get_coil(0)
+        force_error = get_coil(1)
+
+        if force_error:
+            status = ERROR
+        elif run_command:
+            status = RUN
+        else:
+            status = STOP
+
+        if status != previous_status:
+            if status == RUN:
+                # A new production interval begins when the equipment starts.
+                last_production_at = now
+            elif status == STOP:
+                set_holding(CYCLE_TIME, 0)
+            previous_status = status
+
+        set_holding(EQUIPMENT_STATUS, status)
+        # These registers are PLC outputs. Restore the internal counter if an
+        # older test client writes to Holding Register 40001.
+        set_holding(PRODUCTION_COUNT, production_count)
+        set_holding(
+            ALARM_CODE,
+            FORCED_ERROR_ALARM if status == ERROR else NO_ALARM,
+        )
+
+        if status == RUN:
+            # Energy integration: kW * hours = kWh.
+            accumulated_energy += power * elapsed_seconds / 3600.0
+
+            if now - last_metric_at >= METRIC_INTERVAL_SECONDS:
+                temperature = clamp(temperature + random.uniform(-0.5, 0.8), 25.0, 80.0)
+                pressure = clamp(pressure + random.uniform(-0.08, 0.08), 2.5, 4.5)
+                current = clamp(current + random.uniform(-0.3, 0.3), 4.0, 8.0)
+                power = clamp(current * random.uniform(0.38, 0.45), 1.5, 4.0)
+                last_metric_at = now
+
+            if now - last_production_at >= PRODUCTION_INTERVAL_SECONDS:
+                cycle_seconds = now - last_production_at
+                last_production_at = now
+
+                production_count = (production_count + 1) & 0xFFFF
+                vision_sequence = (vision_sequence + 1) & 0xFFFF
+                vision_result = NG if random.random() < 0.05 else OK
+
+                # Make an occasional pressure spike visible around an NG event.
+                if vision_result == NG:
+                    pressure = random.uniform(5.5, 7.0)
+
+                set_holding(PRODUCTION_COUNT, production_count)
+                set_holding(CYCLE_TIME, int(round(cycle_seconds * 100)))
+                set_holding(VISION_RESULT, vision_result)
+                set_holding(VISION_EVENT_SEQUENCE, vision_sequence)
+
+        elif status == STOP:
+            temperature = clamp(temperature + random.uniform(-0.2, 0.1), 22.0, 30.0)
+            pressure = 0.0
+            current = 0.0
+            power = 0.0
+            last_metric_at = now
+
+        else:  # ERROR
+            pressure = 0.0
+            current = 0.0
+            power = 0.0
+            last_metric_at = now
+
+        set_sensor_registers(
+            temperature, pressure, current, power, accumulated_energy
+        )
+
+        if int(now) != int(now - elapsed_seconds):
+            vision_raw = context[0].store["h"].getValues(VISION_RESULT, 1)[0]
+            vision_text = {NOT_INSPECTED: "미검사", OK: "OK", NG: "NG"}.get(
+                vision_raw, "UNKNOWN"
+            )
+            status_text = {STOP: "STOP", RUN: "RUN", ERROR: "ERROR"}[status]
+            print(
+                f"[PLC] 상태={status_text:<5} 생산={production_count:>5} EA "
+                f"검사={vision_text:<3} Seq={vision_sequence:>5} "
+                f"온도={temperature:>4.1f} ℃ 압력={pressure:>4.2f} bar "
+                f"전류={current:>4.1f} A 전력={power:>4.2f} kW"
+            )
+
+        await asyncio.sleep(POLL_INTERVAL_SECONDS)
+
+
+async def main(host: str, port: int) -> None:
+    print(f"가상 PLC 서버 시작 - {host}:{port}")
+    print("Coil 00001: RUN/STOP, Coil 00002: 강제 ERROR")
+    await asyncio.gather(
+        StartAsyncTcpServer(context=context, address=(host, port)),
+        generate_factory_data(),
+    )
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Mini MES Modbus TCP Virtual PLC")
+    parser.add_argument("--host", default="127.0.0.1", help="server bind address")
+    parser.add_argument("--port", type=int, default=502, help="server TCP port")
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    args = parse_args()
+    try:
+        asyncio.run(main(args.host, args.port))
+    except KeyboardInterrupt:
+        print("가상 PLC 서버를 종료합니다.")
