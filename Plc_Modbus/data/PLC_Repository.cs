@@ -16,10 +16,10 @@ namespace Plc_Modbus.data
                 return true;
 
             const string sql = """
-                INSERT INTO sensor_data
+                INSERT INTO equipment_metric
                     (time, equip_id, address, metric_name, metric_value, unit, quality, source_time, collected_at)
                 VALUES
-                    (NOW(), @Equip_id, @Address, @Metric_name, @Metric_value, @Unit, @Quality, @Source_time, @Collected_at)
+                    (NOW(), @Equip_id, @Address, @Metric_name, @Metric_value, @Unit, @Quality, NULL, NOW())
                 """;
 
             try

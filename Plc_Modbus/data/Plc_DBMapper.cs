@@ -24,7 +24,9 @@ namespace Plc_Modbus.data
                     Equip_id = tag.Equip_Id,
                     Address = tag.Address,
                     Metric_name = tag.Metric_Name,
-                    Metric_value = rawValue * tag.Scale
+                    Metric_value = rawValue * tag.Scale,
+                    Unit = tag.Unit,
+                    Quality = 192 // 품질 값은 필요에 따라 설정
                 });
             }
 
