@@ -1,0 +1,22 @@
+@page "/dashboard"
+@rendermode InteractiveServer
+@inject DBRepository DbRepository
+@inject DBConn DBConn
+
+<h1>Dashboard</h1>
+
+<table>
+    <tr>
+        <th></th>
+        <th></th>
+    </tr>
+    @foreach()
+    <tr></tr>
+</table>
+
+@code{
+    private List<PlcDto> DataList = [];
+    protected async Task InitalizeDataAsync(){
+        DataList = await DbRepository.GetMetricDataAsync();
+    }
+}
