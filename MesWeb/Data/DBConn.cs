@@ -1,4 +1,5 @@
 using System.Data.Common;
+using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore.Internal;
 using Npgsql;
@@ -12,7 +13,9 @@ namespace MesWeb.Data{
         {
             _connectionString = configuration.GetConnectionString("PlcDB") 
                                 ?? throw new InvalidOperationException("db연결 정보를 찾을 수 없습니다.");
+            Debug.WriteLine(_connectionString);
         }
+        
 
         public NpgsqlConnection CreateConnection()
         {

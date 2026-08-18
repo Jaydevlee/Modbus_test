@@ -17,7 +17,7 @@ namespace MesWeb.Repository{
         {
             string sql = """
                         SELECT
-                            time AS TIME,
+                            time AS Time,
                             equip_id AS EquipId,
                             address AS Address,
                             metric_name AS MetricName,
@@ -25,7 +25,8 @@ namespace MesWeb.Repository{
                             unit AS Unit,
                             quality AS Quality,
                             collected_at AS CollectedAt
-                        FROM equipment_metric    
+                        FROM equipment_metric
+                        ORDER BY time DESC    
                         LIMIT 100
                         """;
             await using var connection = _dbConn.CreateConnection();
