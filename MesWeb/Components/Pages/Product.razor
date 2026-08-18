@@ -1,0 +1,24 @@
+@page "/product"
+@rendermode InteractiveServer
+@inject ProductRepository productRepository
+
+<PageTitle>품목 관리</PageTitle>
+<h1>품목 관리</h1>
+
+<input type="text"class="form-control" placeholder="품목명" @bind=name />
+<input type="text"class="form-control" placeholder="제작버전" @bind=recipeVer />
+<button type="button" @onclick="InsertProduct">등록</button>
+
+@code{
+    private string name;
+    private string recipeVer;
+    private bool IsActive = true;
+    private async Task InsertProduct(){
+        ProductDto productDto = new ProductDto{
+                                                Name = name,
+                                                RecipeVersion = recipeVer,
+                                                IsActive = IsActive                
+                                            };
+        await productRepository.InsertProductAsync(productDto);                    
+    }   
+}   
