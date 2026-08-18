@@ -1,10 +1,15 @@
 using MesWeb.Components;
+using MesWeb.Data;
+using MesWeb.Repository;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+builder.Services.AddSingleton<DBConn>();
+builder.Services.AddScoped<DBRepository>();
 
 var app = builder.Build();
 
