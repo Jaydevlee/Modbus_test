@@ -10,6 +10,7 @@ builder.Services.AddRazorComponents()
 
 builder.Services.AddSingleton<DBConn>();
 builder.Services.AddScoped<DBRepository>();
+builder.Services.AddScoped<ProductRepository>();
 
 var app = builder.Build();
 
