@@ -3,22 +3,54 @@
 @inject ProductRepository productRepository
 
 <PageTitle>품목 관리</PageTitle>
-<h1>품목 관리</h1>
+<MudText Typo="Typo.h4" Class="mb-4">품목 관리</MudText>
 
-<input type="text"class="form-control" placeholder="품목명" @bind=name />
-<input type="text"class="form-control" placeholder="제작버전" @bind=recipeVer />
-<button type="button" @onclick="InsertProduct">등록</button>
+<MudStack Row="true" Class="mb-4">
+    <MudTextField @bind-Value="name" Label="품목명" Variant="Variant.Outlined" />
+    <MudTextField @bind-Value="recipeVer" Label="제작버전" Variant="Variant.Outlined" />
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="InsertProduct">등록</MudButton>
+</MudStack>
+
+<MudTable Items="@datalist">
+    <HeaderContent>
+        <MudTh>품목번호</MudTh>
+        <MudTh>품목명</MudTh>
+        <MudTh>제조법 번호</MudTh>
+        <MudTh>활성화 여부</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.ProductId</MudTd>
+        <MudTd>@context.Name</MudTd>
+        <MudTd>@context.RecipeVersion</MudTd>
+        <MudTd>
+            @if (context.IsActive)
+            {
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" />
+            }
+            else
+            {
+                <MudIcon Icon="@Icons.Material.Filled.Cancel" Color="Color.Error" />
+            }
+        </MudTd>
+    </RowTemplate>
+</MudTable>
 
 @code{
     private string name;
     private string recipeVer;
     private bool IsActive = true;
+    private bool DataStored;
+    private  List<ProductDto> datalist = [];
+    protected override async Task OnInitializedAsync(){
+       datalist = await productRepository.GetProductDataAsync();
+    }
     private async Task InsertProduct(){
         ProductDto productDto = new ProductDto{
                                                 Name = name,
                                                 RecipeVersion = recipeVer,
                                                 IsActive = IsActive                
                                             };
-        await productRepository.InsertProductAsync(productDto);                    
+        await productRepository.InsertProductAsync(productDto);
+                 
     }   
 }   

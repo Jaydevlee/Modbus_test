@@ -95,5 +95,5 @@ VALUES
 	('lot', 'LOT', 0),
 	('production_result', 'RS', 0)
 ON CONFLICT (table_name, years) DO NOTHING;
-
+SELECT * FROM PRODUCT;
 SHOW timezone;
