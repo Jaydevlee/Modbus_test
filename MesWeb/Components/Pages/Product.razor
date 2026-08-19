@@ -1,6 +1,12 @@
 @page "/product"
 @rendermode InteractiveServer
 @inject ProductRepository productRepository
+@inject ISnackbar snackbarService
+
+@if(loadData == false) 
+{
+    <MudAlert Severity="Severity.Error" ContentAlignment="HorizontalAlignment.Center">@loadErrMsg</MudAlert>
+}
 
 <PageTitle>품목 관리</PageTitle>
 <MudText Typo="Typo.h4" Class="mb-4">품목 관리</MudText>
@@ -11,46 +17,80 @@
     <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="InsertProduct">등록</MudButton>
 </MudStack>
 
-<MudTable Items="@datalist">
-    <HeaderContent>
-        <MudTh>품목번호</MudTh>
-        <MudTh>품목명</MudTh>
-        <MudTh>제조법 번호</MudTh>
-        <MudTh>활성화 여부</MudTh>
-    </HeaderContent>
-    <RowTemplate>
-        <MudTd>@context.ProductId</MudTd>
-        <MudTd>@context.Name</MudTd>
-        <MudTd>@context.RecipeVersion</MudTd>
-        <MudTd>
-            @if (context.IsActive)
-            {
-                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" />
-            }
-            else
-            {
-                <MudIcon Icon="@Icons.Material.Filled.Cancel" Color="Color.Error" />
-            }
-        </MudTd>
-    </RowTemplate>
-</MudTable>
+<MudDataGrid Items="@datalist" SortMode="SortMode.Multiple" Filterable="true">
+    <Columns>
+        <PropertyColumn Property="x => x.ProductId" Title="품목번호" />
+        <PropertyColumn Property="x => x.Name" Title="품목명" />
+        <PropertyColumn Property="x => x.RecipeVersion" Title="제조법 번호" />
+        <TemplateColumn Title="활성화 여부" SortBy="x => x.IsActive">
+            <CellTemplate>
+                @if (context.Item.IsActive)
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" />
+                }
+                else
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.Cancel" Color="Color.Error" />
+                }
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+</MudDataGrid>
 
 @code{
-    private string name;
-    private string recipeVer;
+    private string name = string.Empty;
+    private string recipeVer = string.Empty;
     private bool IsActive = true;
-    private bool DataStored;
+    private bool? dataStored;
+    private bool? loadData;
+    private string? loadErrMsg;
+    private string? insertErrMsg;
     private  List<ProductDto> datalist = [];
+
     protected override async Task OnInitializedAsync(){
-       datalist = await productRepository.GetProductDataAsync();
+        await LoadDataAsync();
     }
+
     private async Task InsertProduct(){
         ProductDto productDto = new ProductDto{
                                                 Name = name,
                                                 RecipeVersion = recipeVer,
                                                 IsActive = IsActive                
                                             };
-        await productRepository.InsertProductAsync(productDto);
-                 
-    }   
-}   
+        try
+        {
+            int result = await productRepository.InsertProductAsync(productDto);
+            dataStored = result > 0;
+            await LoadDataAsync();
+            ShowInsertSnakbar();
+        }
+        catch (Exception ex)
+        {
+            dataStored = false;
+            insertErrMsg = ex.Message;
+            ShowInsertSnakbar();
+        }
+    }
+
+    private async Task LoadDataAsync()
+    {
+        try
+        {
+            datalist = await productRepository.GetProductDataAsync();
+            loadData = true;
+        } 
+        catch (Exception ex)
+        {
+            loadData = false;
+            loadErrMsg = ex.Message;
+        }
+    }
+
+    private void ShowInsertSnakbar(){
+        if(dataStored == true) snackbarService.Add("품목이 저장되었습니다.", Severity.Info, (options) =>
+        {
+            options.CloseAfterNavigation = true;
+        });
+        else snackbarService.Add($"품목 저장을 실패했습니다: {insertErrMsg}", Severity.Error);
+    }
+}
