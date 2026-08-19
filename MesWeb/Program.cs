@@ -1,13 +1,14 @@
 using MesWeb.Components;
 using MesWeb.Data;
 using MesWeb.Repository;
+using MudBlazor.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
-
+builder.Services.AddMudServices();
 builder.Services.AddSingleton<DBConn>();
 builder.Services.AddScoped<DBRepository>();
 builder.Services.AddScoped<ProductRepository>();

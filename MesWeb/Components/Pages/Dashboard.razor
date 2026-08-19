@@ -2,32 +2,30 @@
 @rendermode InteractiveServer
 @inject DBRepository DbRepository
 <PageTitle>Dashboard</PageTitle>
-<h1>Dashboard</h1>
+<MudText Typo="Typo.h4" Calss="mb-4">대시보드</MudText>
 
-<table>
-    <tr>
-        <th>시간</th>
-        <th>장비이름</th>
-        <th>주소</th>
-        <th>측정값</th>
-        <th>측정값</th>
-        <th>단위</th>
-        <th>품질</th>
-        <th>수집시간</th>
-    </tr>
-    @foreach(var items in @DataList){
-        <tr>
-            <td>@items.Time.ToLocalTime()</td>
-            <td>@items.EquipId</td>
-            <td>@items.Address</td>
-            <td>@items.MetricName</td>
-            <td>@items.MetricValue</td>
-            <td>@items.Unit</td>
-            <td>@items.Quality</td>
-            <td>@items.CollectedAt</td>
-        </tr>
-    }
-</table>
+<MudTable Items="@DataList">
+    <HeaderContent>
+        <MudTh>시간</MudTh>
+        <MudTh>장비이름</MudTh>
+        <MudTh>주소</MudTh>
+        <MudTh>측정데이터</MudTh>
+        <MudTh>측정값</MudTh>
+        <MudTh>단위</MudTh>
+        <MudTh>품질</MudTh>
+        <MudTh>수집시간</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.Time.ToLocalTime()</MudTd>
+        <MudTd>@context.EquipId</MudTd>
+        <MudTd>@context.Address</MudTd>
+        <MudTd>@context.MetricName</MudTd>
+        <MudTd>@context.MetricValue</MudTd>
+        <MudTd>@context.Unit</MudTd>
+        <MudTd>@context.Quality</MudTd>
+        <MudTd>@context.CollectedAt.ToLocalTime()</MudTd>
+    </RowTemplate>
+</MudTable>
 
 @code{
     private List<PlcDto> DataList = [];
