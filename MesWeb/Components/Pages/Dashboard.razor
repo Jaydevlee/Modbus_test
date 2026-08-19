@@ -2,34 +2,45 @@
 @rendermode InteractiveServer
 @inject DBRepository DbRepository
 <PageTitle>Dashboard</PageTitle>
-<MudText Typo="Typo.h4" Calss="mb-4">대시보드</MudText>
 
-<MudTable Items="@DataList">
-    <HeaderContent>
-        <MudTh>시간</MudTh>
-        <MudTh>장비이름</MudTh>
-        <MudTh>주소</MudTh>
-        <MudTh>측정데이터</MudTh>
-        <MudTh>측정값</MudTh>
-        <MudTh>단위</MudTh>
-        <MudTh>품질</MudTh>
-        <MudTh>수집시간</MudTh>
-    </HeaderContent>
-    <RowTemplate>
-        <MudTd>@context.Time.ToLocalTime()</MudTd>
-        <MudTd>@context.EquipId</MudTd>
-        <MudTd>@context.Address</MudTd>
-        <MudTd>@context.MetricName</MudTd>
-        <MudTd>@context.MetricValue</MudTd>
-        <MudTd>@context.Unit</MudTd>
-        <MudTd>@context.Quality</MudTd>
-        <MudTd>@context.CollectedAt.ToLocalTime()</MudTd>
-    </RowTemplate>
-</MudTable>
+<MudText Typo="Typo.h4" Class="mb-4">대시보드</MudText>
+@if(@loadData == false) {
+     <MudAlert Severity="Severity.Error" ContentAlignment="HorizontalAlignment.Center">@errorMessage</MudAlert>
+}
+@if (DataList == null)
+{
+    <MudText Typo="Typo.h4">
+        데이터가 존재하지 않습니다.
+    </MudText>
+}
+
+<MudDataGrid Items="@DataList" SortMode="SortMode.Multiple" Filterable="true">
+    <Columns>
+        <PropertyColumn Property="x => x.Time.ToLocalTime()" Title="시간" />
+        <PropertyColumn Property="x => x.EquipId" Title="장비이름" />
+        <PropertyColumn Property="x => x.Address" Title="주소" />
+        <PropertyColumn Property="x => x.MetricName" Title="측정데이터" />
+        <PropertyColumn Property="x => x.MetricValue" Title="측정값" />
+        <PropertyColumn Property="x => x.Unit" Title="단위" />
+        <PropertyColumn Property="x => x.Quality" Title="품질" />
+        <PropertyColumn Property="x => x.CollectedAt.ToLocalTime()" Title="수집시간" />
+    </Columns>
+</MudDataGrid>
 
 @code{
-    private List<PlcDto> DataList = [];
+    private List<PlcDto>? DataList = [];
+    private string? errorMessage;
+    private bool? loadData;
     protected override async Task OnInitializedAsync(){
-        DataList = await DbRepository.GetMetricDataAsync();
+        try
+        {
+            DataList = await DbRepository.GetMetricDataAsync();
+            loadData = true;
+        }
+        catch(Exception ex)
+        {
+            loadData = false;
+            errorMessage = ex.Message;
+        }
     }
 }

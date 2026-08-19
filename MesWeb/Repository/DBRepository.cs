@@ -30,8 +30,16 @@ namespace MesWeb.Repository{
                         LIMIT 100
                         """;
             await using var connection = _dbConn.CreateConnection();
-            var result = await connection.QueryAsync<PlcDto>(sql);
-            return result.AsList();
+            try
+            {
+                var result = await connection.QueryAsync<PlcDto>(sql);
+                return result.AsList();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"오류가 발생했습니다.: {ex.Message}");
+            }
+            
         }
     }
 }

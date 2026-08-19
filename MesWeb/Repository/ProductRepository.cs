@@ -24,12 +24,20 @@ namespace MesWeb.Repository{
                         FROM product    
                         """;
             await using var connection = _DBConn.CreateConnection();
-            var result = await connection.QueryAsync<ProductDto>(sql);
-            return result.AsList();
+            try
+            {
+                var result = await connection.QueryAsync<ProductDto>(sql);
+                Debug.WriteLine(result.Count());
+                return result.AsList();
+            } 
+            catch (Exception ex)
+            {
+                throw new Exception($"오류가 발생했습니다.: {ex.Message}");
+            }
         }
 
         // 품목 추가
-        public async Task<string> InsertProductAsync(ProductDto productDto)
+        public async Task<int> InsertProductAsync(ProductDto productDto)
         {
             await using var connection = _DBConn.CreateConnection();
             await connection.OpenAsync();
@@ -64,7 +72,7 @@ namespace MesWeb.Repository{
                                                             transaction
                                                             );
                 await transaction.CommitAsync();
-                return generatedId;
+                return result;
             }
             catch (Exception ex)
             {

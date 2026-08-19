@@ -1,6 +1,7 @@
 using MesWeb.Components;
 using MesWeb.Data;
 using MesWeb.Repository;
+using MudBlazor;
 using MudBlazor.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -8,7 +9,12 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
-builder.Services.AddMudServices();
+builder.Services.AddMudServices(config =>
+{
+    config.SnackbarConfiguration.PositionClass = Defaults.Classes.Position.TopCenter;
+    config.SnackbarConfiguration.PreventDuplicates = true;
+    config.SnackbarConfiguration.NewestOnTop = true;
+});
 builder.Services.AddSingleton<DBConn>();
 builder.Services.AddScoped<DBRepository>();
 builder.Services.AddScoped<ProductRepository>();
