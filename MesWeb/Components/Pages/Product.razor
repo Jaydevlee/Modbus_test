@@ -3,18 +3,20 @@
 @inject ProductRepository productRepository
 @inject ISnackbar snackbarService
 
+<PageTitle>품목 관리</PageTitle>
+
 @if(loadData == false) 
 {
     <MudAlert Severity="Severity.Error" ContentAlignment="HorizontalAlignment.Center">@loadErrMsg</MudAlert>
 }
 
-<PageTitle>품목 관리</PageTitle>
+
 <MudText Typo="Typo.h4" Class="mb-4">품목 관리</MudText>
 
 <MudStack Row="true" Class="mb-4">
     <MudTextField @bind-Value="name" Label="품목명" Variant="Variant.Outlined" />
     <MudTextField @bind-Value="recipeVer" Label="제작버전" Variant="Variant.Outlined" />
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="InsertProduct">등록</MudButton>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="InsertProduct" Disabled="@isDisabled">등록</MudButton>
 </MudStack>
 
 <MudDataGrid Items="@datalist" SortMode="SortMode.Multiple" Filterable="true">
@@ -35,41 +37,26 @@
             </CellTemplate>
         </TemplateColumn>
     </Columns>
+    <PagerContent>
+        <MudStack Row="true" Justify="Justify.Center" Class="flex-grow-1">
+            <MudDataGridPager T="ProductDto" />
+        </MudStack>
+    </PagerContent>
 </MudDataGrid>
 
 @code{
     private string name = string.Empty;
     private string recipeVer = string.Empty;
-    private bool IsActive = true;
-    private bool? dataStored;
-    private bool? loadData;
+    private bool isActive = true;
+    private bool dataStored;
+    private bool loadData;
+    private bool isDisabled;
     private string? loadErrMsg;
     private string? insertErrMsg;
     private  List<ProductDto> datalist = [];
 
     protected override async Task OnInitializedAsync(){
         await LoadDataAsync();
-    }
-
-    private async Task InsertProduct(){
-        ProductDto productDto = new ProductDto{
-                                                Name = name,
-                                                RecipeVersion = recipeVer,
-                                                IsActive = IsActive                
-                                            };
-        try
-        {
-            int result = await productRepository.InsertProductAsync(productDto);
-            dataStored = result > 0;
-            await LoadDataAsync();
-            ShowInsertSnakbar();
-        }
-        catch (Exception ex)
-        {
-            dataStored = false;
-            insertErrMsg = ex.Message;
-            ShowInsertSnakbar();
-        }
     }
 
     private async Task LoadDataAsync()
@@ -86,11 +73,45 @@
         }
     }
 
+    private async Task InsertProduct(){
+        if (name.IsWhiteSpace() || recipeVer.IsWhiteSpace()){
+            snackbarService.Add($": 품목명과 제조법 번호는 비어있으면 안됩니다.", Severity.Warning);
+            return;
+        }
+        isDisabled = true;
+        ProductDto productDto = new ProductDto{
+            Name = name,
+            RecipeVersion = recipeVer,
+            IsActive = isActive                
+        };
+        try
+        {   
+            int result = await productRepository.InsertProductAsync(productDto);
+            dataStored = result > 0;
+            ResetTextField();
+            await LoadDataAsync();
+            ShowInsertSnakbar();
+            isDisabled = false;
+        }
+        catch (Exception ex)
+        {
+            dataStored = false;
+            insertErrMsg = ex.Message;
+            ShowInsertSnakbar();
+            isDisabled = false;
+        }
+    }
+
     private void ShowInsertSnakbar(){
         if(dataStored == true) snackbarService.Add("품목이 저장되었습니다.", Severity.Info, (options) =>
         {
             options.CloseAfterNavigation = true;
         });
         else snackbarService.Add($"품목 저장을 실패했습니다: {insertErrMsg}", Severity.Error);
+    }
+
+    private void ResetTextField(){
+        name = string.Empty;
+        recipeVer = string.Empty;
     }
 }
