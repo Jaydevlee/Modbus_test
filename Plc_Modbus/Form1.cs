@@ -75,7 +75,8 @@ namespace Plc_Modbus
         private async void btnWrite_Click(object? sender, EventArgs e)
         {
             if (cmbCoil1.SelectedValue is not bool runCommand
-                || cmbCoil2.SelectedValue is not bool forceError)
+                || cmbCoil2.SelectedValue is not bool forceError
+                || txtTargetQuantity.Text.IsWhiteSpace())
             {
                 MessageBox.Show("RUN과 ERROR 명령을 선택해주세요.");
                 return;
@@ -84,15 +85,18 @@ namespace Plc_Modbus
             btnWrite.Enabled = false;
             try
             {
-                bool success = await _plcWriter.WriteCommandsAsync(
+                ushort targetQuantity = ushort.Parse(txtTargetQuantity.Text);
+                bool writeCommand = await _plcWriter.WriteCommandsAsync(
                     runCommand, forceError, _formCts.Token);
-                if (!success && !_formCts.IsCancellationRequested)
+                bool writeQuantity = await _plcWriter.WriteTargetQuantityAsync(
+                    targetQuantity, _formCts.Token);
+                if (!writeCommand && !writeQuantity && !_formCts.IsCancellationRequested)
                 {
                     MessageBox.Show("PLC 명령 전송에 실패했습니다.");
                 }
             }
             finally
-            {
+               {
                 if (!_formCts.IsCancellationRequested)
                     btnWrite.Enabled = true;
             }

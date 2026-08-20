@@ -39,6 +39,7 @@
             btnSpeed = new Button();
             txtSpeed = new TextBox();
             lblSpeed = new Label();
+            txtTargetQuantity = new TextBox();
             ((System.ComponentModel.ISupportInitialize)dgvPlc).BeginInit();
             panel1.SuspendLayout();
             panel2.SuspendLayout();
@@ -58,7 +59,7 @@
             // cmbCoil1
             // 
             cmbCoil1.FormattingEnabled = true;
-            cmbCoil1.Location = new Point(0, 39);
+            cmbCoil1.Location = new Point(3, 39);
             cmbCoil1.Name = "cmbCoil1";
             cmbCoil1.Size = new Size(230, 28);
             cmbCoil1.TabIndex = 1;
@@ -73,18 +74,19 @@
             // 
             // panel1
             // 
+            panel1.Controls.Add(txtTargetQuantity);
             panel1.Controls.Add(btnWrite);
             panel1.Controls.Add(lblCoil);
             panel1.Controls.Add(cmbCoil2);
             panel1.Controls.Add(cmbCoil1);
-            panel1.Location = new Point(882, 173);
+            panel1.Location = new Point(882, 97);
             panel1.Name = "panel1";
-            panel1.Size = new Size(237, 165);
+            panel1.Size = new Size(237, 241);
             panel1.TabIndex = 3;
             // 
             // btnWrite
             // 
-            btnWrite.Location = new Point(3, 124);
+            btnWrite.Location = new Point(7, 194);
             btnWrite.Name = "btnWrite";
             btnWrite.Size = new Size(83, 30);
             btnWrite.TabIndex = 3;
@@ -94,7 +96,7 @@
             // lblCoil
             // 
             lblCoil.AutoSize = true;
-            lblCoil.Location = new Point(7, 16);
+            lblCoil.Location = new Point(13, 16);
             lblCoil.Name = "lblCoil";
             lblCoil.Size = new Size(84, 20);
             lblCoil.TabIndex = 4;
@@ -143,6 +145,13 @@
             lblSpeed.TabIndex = 5;
             lblSpeed.Text = "속도 조절";
             // 
+            // txtTargetQuantity
+            // 
+            txtTargetQuantity.Location = new Point(3, 134);
+            txtTargetQuantity.Name = "txtTargetQuantity";
+            txtTargetQuantity.Size = new Size(226, 27);
+            txtTargetQuantity.TabIndex = 7;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(9F, 20F);
@@ -175,5 +184,6 @@
         private Button btnSpeed;
         private TextBox txtSpeed;
         private Label lblSpeed;
+        private TextBox txtTargetQuantity;
     }
 }

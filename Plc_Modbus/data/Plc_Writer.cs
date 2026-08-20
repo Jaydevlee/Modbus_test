@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Reflection.Metadata.Ecma335;
 
 namespace Plc_Modbus.data
 {
@@ -32,6 +33,29 @@ namespace Plc_Modbus.data
             catch (Exception ex)
             {
                 Debug.WriteLine($"[PLC] 명령 쓰기 실패: {ex.Message}");
+                return false;
+            }
+        }
+
+        public async Task<bool> WriteTargetQuantityAsync(ushort targetQuantity,
+            CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                await _connection.ExecuteAsync(
+                    master => master.WriteSingleRegisterAsync(
+                        _connection.Settings.UnitId, 6, targetQuantity),
+                        cancellationToken
+                    );
+                    return true;
+            }
+            catch(OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                return false;
+            }
+            catch(Exception ex)
+            {
+                Debug.WriteLine($"목표 생산량 입력 실패: {ex.Message}");
                 return false;
             }
         }
