@@ -12,6 +12,7 @@ namespace Plc_Modbus.data
         private const int AlarmCodeIndex = 3;
         private const int VisionResultIndex = 4;
         private const int VisionSequenceIndex = 5;
+        private const int TargetQuantity = 6;
         private const int TemperatureIndex = 9;
         private const int PressureIndex = 10;
         private const int CurrentIndex = 11;
@@ -178,6 +179,7 @@ namespace Plc_Modbus.data
                 AlarmCode = registers[AlarmCodeIndex],
                 VisionResult = registers[VisionResultIndex],
                 VisionEventSequence = registers[VisionSequenceIndex],
+                TargetQuantity = registers[TargetQuantity],
                 Temperature = registers[TemperatureIndex] * 0.1,
                 Pressure = registers[PressureIndex] * 0.01,
                 Current = registers[CurrentIndex] * 0.1,

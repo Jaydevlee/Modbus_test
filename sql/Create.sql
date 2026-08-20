@@ -149,7 +149,8 @@ CREATE TABLE IF NOT EXISTS common_code(
 CREATE INDEX IF NOT EXISTS ix_common_code_group
 	ON common_code (group_code, sort_order);
 
-SELECT * FROM equipment_metric;
+SELECT * FROM equipment_metric
+ORDER BY TIME DESC;
 SELECT * FROM PRIMARY_SEQUENCE;
 
 SELECT * FROM PRODUCT;

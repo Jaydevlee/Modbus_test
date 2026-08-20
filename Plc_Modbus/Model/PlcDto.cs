@@ -21,6 +21,7 @@ namespace Plc_Modbus.Model
             _ => "미검사"
         };
         public ushort VisionEventSequence { get; set; }
+        public int TargetQuantity {get; set;}
         public double Temperature { get; set; }
         public double Pressure { get; set; }
         public double Current { get; set; }
