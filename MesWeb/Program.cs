@@ -18,6 +18,7 @@ builder.Services.AddMudServices(config =>
 builder.Services.AddSingleton<DBConn>();
 builder.Services.AddScoped<DBRepository>();
 builder.Services.AddScoped<ProductRepository>();
+builder.Services.AddScoped<EquipRepository>();
 
 var app = builder.Build();
 

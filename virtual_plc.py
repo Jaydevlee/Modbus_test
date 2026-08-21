@@ -13,11 +13,12 @@ from pymodbus.server import StartAsyncTcpServer
 
 # Holding Register map (display address -> zero-based offset)
 PRODUCTION_COUNT = 0      # 40001, EA
-EQUIPMENT_STATUS = 1      # 40002, 0=STOP, 1=RUN, 2=ERROR
+EQUIPMENT_STATUS = 1      # 40002, 0=STOP, 1=RUN, 2=ERROR, 3=COMPLETE
 CYCLE_TIME = 2            # 40003, raw / 100 = seconds
-ALARM_CODE = 3            # 40004, 0=normal
+ALARM_CODE = 3            # 40004, 0=normal, see ALARM_* below
 VISION_RESULT = 4         # 40005, 0=not inspected, 1=OK, 2=NG
 VISION_EVENT_SEQUENCE = 5 # 40006, increments on every inspection
+TARGET_QUANTITY = 6       # 40007, EA, written by MES when a work order starts
 TEMPERATURE = 9           # 40010, raw / 10 = degrees Celsius
 PRESSURE = 10             # 40011, raw / 100 = bar
 CURRENT = 11              # 40012, raw / 10 = A
@@ -28,13 +29,21 @@ ENERGY_LOW_WORD = 14      # 40015, accumulated energy low word, raw / 100 = kWh
 STOP = 0
 RUN = 1
 ERROR = 2
+COMPLETE = 3
 
 NOT_INSPECTED = 0
 OK = 1
 NG = 2
 
 NO_ALARM = 0
-FORCED_ERROR_ALARM = 1001
+ALARM_E_STOP = 1001            # 비상정지
+ALARM_SENSOR_FAULT = 1002      # 센서 이상
+ALARM_MATERIAL_SHORTAGE = 1003 # 자재 부족
+FORCED_ERROR_ALARM_CODES = [
+    ALARM_E_STOP,
+    ALARM_SENSOR_FAULT,
+    ALARM_MATERIAL_SHORTAGE,
+]
 
 REGISTER_COUNT = 20
 POLL_INTERVAL_SECONDS = 0.25
@@ -67,6 +76,10 @@ def split_uint32(value: int) -> tuple[int, int]:
 
 def set_holding(offset: int, value: int) -> None:
     context[0].store["h"].setValues(offset, [value & 0xFFFF])
+
+
+def get_holding(offset: int) -> int:
+    return context[0].store["h"].getValues(offset, 1)[0]
 
 
 def get_coil(offset: int) -> bool:
@@ -110,6 +123,10 @@ async def generate_factory_data() -> None:
     power = 0.0
 
     previous_status = STOP
+    previous_target_quantity = 0
+    previous_force_error = False
+    current_alarm_code = NO_ALARM
+    completed_latch = False
     last_metric_at = time.monotonic()
     last_production_at = time.monotonic()
     last_loop_at = time.monotonic()
@@ -120,6 +137,7 @@ async def generate_factory_data() -> None:
     set_holding(ALARM_CODE, NO_ALARM)
     set_holding(VISION_RESULT, NOT_INSPECTED)
     set_holding(VISION_EVENT_SEQUENCE, vision_sequence)
+    set_holding(TARGET_QUANTITY, 0)
     set_sensor_registers(
         temperature, pressure, current, power, accumulated_energy
     )
@@ -132,8 +150,32 @@ async def generate_factory_data() -> None:
         run_command = get_coil(0)
         force_error = get_coil(1)
 
+        # A new target quantity means a new work order was handed to the PLC.
+        # Reset the counter and any latched completion, but only while the
+        # equipment is not actively running an existing job.
+        target_quantity = get_holding(TARGET_QUANTITY)
+        if target_quantity != previous_target_quantity:
+            if previous_status != RUN:
+                production_count = 0
+                completed_latch = False
+            previous_target_quantity = target_quantity
+
+        # Pick a fresh alarm reason each time ERROR is newly forced, so
+        # downstream equip_downtime/common_code data has variety.
+        if force_error and not previous_force_error:
+            current_alarm_code = random.choice(FORCED_ERROR_ALARM_CODES)
+        elif not force_error:
+            current_alarm_code = NO_ALARM
+        previous_force_error = force_error
+
         if force_error:
             status = ERROR
+        elif completed_latch:
+            status = COMPLETE
+            if not run_command:
+                # MES acknowledged completion by dropping RUN; go idle.
+                completed_latch = False
+                status = STOP
         elif run_command:
             status = RUN
         else:
@@ -143,7 +185,7 @@ async def generate_factory_data() -> None:
             if status == RUN:
                 # A new production interval begins when the equipment starts.
                 last_production_at = now
-            elif status == STOP:
+            elif status in (STOP, COMPLETE):
                 set_holding(CYCLE_TIME, 0)
             previous_status = status
 
@@ -151,10 +193,7 @@ async def generate_factory_data() -> None:
         # These registers are PLC outputs. Restore the internal counter if an
         # older test client writes to Holding Register 40001.
         set_holding(PRODUCTION_COUNT, production_count)
-        set_holding(
-            ALARM_CODE,
-            FORCED_ERROR_ALARM if status == ERROR else NO_ALARM,
-        )
+        set_holding(ALARM_CODE, current_alarm_code)
 
         if status == RUN:
             # Energy integration: kW * hours = kWh.
@@ -184,8 +223,18 @@ async def generate_factory_data() -> None:
                 set_holding(VISION_RESULT, vision_result)
                 set_holding(VISION_EVENT_SEQUENCE, vision_sequence)
 
+                if target_quantity > 0 and production_count >= target_quantity:
+                    completed_latch = True
+
         elif status == STOP:
             temperature = clamp(temperature + random.uniform(-0.2, 0.1), 22.0, 30.0)
+            pressure = 0.0
+            current = 0.0
+            power = 0.0
+            last_metric_at = now
+
+        elif status == COMPLETE:
+            temperature = clamp(temperature + random.uniform(-0.3, 0.1), 22.0, 30.0)
             pressure = 0.0
             current = 0.0
             power = 0.0
@@ -206,9 +255,15 @@ async def generate_factory_data() -> None:
             vision_text = {NOT_INSPECTED: "미검사", OK: "OK", NG: "NG"}.get(
                 vision_raw, "UNKNOWN"
             )
-            status_text = {STOP: "STOP", RUN: "RUN", ERROR: "ERROR"}[status]
+            status_text = {
+                STOP: "STOP",
+                RUN: "RUN",
+                ERROR: "ERROR",
+                COMPLETE: "COMPLETE",
+            }[status]
             print(
-                f"[PLC] 상태={status_text:<5} 생산={production_count:>5} EA "
+                f"[PLC] 상태={status_text:<8} 목표={target_quantity:>5} EA "
+                f"생산={production_count:>5} EA "
                 f"검사={vision_text:<3} Seq={vision_sequence:>5} "
                 f"온도={temperature:>4.1f} ℃ 압력={pressure:>4.2f} bar "
                 f"전류={current:>4.1f} A 전력={power:>4.2f} kW"
@@ -220,6 +275,7 @@ async def generate_factory_data() -> None:
 async def main(host: str, port: int) -> None:
     print(f"가상 PLC 서버 시작 - {host}:{port}")
     print("Coil 00001: RUN/STOP, Coil 00002: 강제 ERROR")
+    print("Holding Register 40007: 목표수량(TargetQuantity) - MES가 작업 시작 시 기록")
     await asyncio.gather(
         StartAsyncTcpServer(context=context, address=(host, port)),
         generate_factory_data(),

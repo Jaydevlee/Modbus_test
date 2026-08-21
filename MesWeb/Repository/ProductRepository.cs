@@ -32,7 +32,7 @@ namespace MesWeb.Repository{
             } 
             catch (Exception ex)
             {
-                throw new Exception($"오류가 발생했습니다.: {ex.Message}");
+                throw new Exception($"오류가 발생했습니다: {ex.Message}");
             }
         }
 

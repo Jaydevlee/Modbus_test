@@ -142,14 +142,14 @@ CREATE TABLE IF NOT EXISTS common_code(
 	sort_order		int			NOT NULL DEFAULT 0,
 	is_active		boolean 	NOT NULL DEFAULT TRUE,
 	created_at		timestamptz NOT NULL DEFAULT now(),
-	
-	PRIMARY key(group_code, code)
+	PRIMARY KEY(group_code, code)
 );
 
 CREATE INDEX IF NOT EXISTS ix_common_code_group
 	ON common_code (group_code, sort_order);
 
-SELECT * FROM equipment_metric;
+SELECT * FROM equipment_metric
+ORDER BY TIME DESC;
 SELECT * FROM PRIMARY_SEQUENCE;
 
 SELECT * FROM PRODUCT;

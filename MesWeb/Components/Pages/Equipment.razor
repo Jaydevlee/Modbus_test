@@ -1,2 +1,116 @@
-@page "/equipmnet"
+@page "/equipment"
 @rendermode InteractiveServer
+@inject EquipRepository equipRepository
+@inject ISnackbar snackbarService
+
+<PageTitle>설비 관리</PageTitle>
+
+@if(loadData == false) 
+{
+    <MudAlert Severity="Severity.Error" ContentAlignment="HorizontalAlignment.Center">@loadErrMsg</MudAlert>
+}
+
+
+<MudStack Row="true" Class="mb-4">
+    <MudTextField @bind-Value="name" Label="설비명" Variant="Variant.Outlined" />
+    <MudTextField @bind-Value="location" Label="위치" Variant="Variant.Outlined" />
+
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="InsertProduct" Disabled="@isDisabled">등록</MudButton>
+</MudStack>
+
+<MudDataGrid Items="@datalist" SortMode="SortMode.Multiple" Filterable="true">
+    <Columns>
+        <PropertyColumn Property="x => x.EquipId" Title="설비번호" />
+        <PropertyColumn Property="x => x.Name" Title="설비명" />
+        <PropertyColumn Property="x => x.Location" Title="위치" />
+        <PropertyColumn Property="x => x.Status" Title="상태" />
+        <TemplateColumn Title="활성화 여부" SortBy="x => x.IsActive">
+            <CellTemplate>
+                @if (context.Item.IsActive)
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" />
+                }
+                else
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.Cancel" Color="Color.Error" />
+                }
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+    <PagerContent>
+        <MudStack Row="true" Justify="Justify.Center" Class="flex-grow-1">
+            <MudDataGridPager T="EquipDto" />
+        </MudStack>
+    </PagerContent>
+</MudDataGrid>
+
+@code{
+    private string name = string.Empty;
+    private string location = string.Empty;
+    private bool dataStored;
+    private bool loadData;
+    private bool isDisabled;
+    private string? loadErrMsg;
+    private string? insertErrMsg;
+    private  List<EquipDto> datalist = [];
+
+    protected override async Task OnInitializedAsync(){
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        try
+        {
+            datalist = await equipRepository.GetEquipAsync();
+            loadData = true;
+        } 
+        catch (Exception ex)
+        {
+            loadData = false;
+            loadErrMsg = ex.Message;
+        }
+    }
+
+    private async Task InsertProduct(){
+        if (name.IsWhiteSpace() || location.IsWhiteSpace()){
+            snackbarService.Add($": 설비명과 위치는 비어있으면 안됩니다.", Severity.Warning);
+            return;
+        }
+        isDisabled = true;
+        EquipDto equipDto = new EquipDto{
+            Name = name,
+            Location = location,
+        };
+        try
+        {   
+            int result = await equipRepository.InsertEquipAsync(equipDto);
+            dataStored = result > 0;
+            ResetTextField();
+            await LoadDataAsync();
+            ShowInsertSnakbar();
+            isDisabled = false;
+        }
+        catch (Exception ex)
+        {
+            dataStored = false;
+            insertErrMsg = ex.Message;
+            ShowInsertSnakbar();
+            isDisabled = false;
+        }
+    }
+
+    private void ShowInsertSnakbar(){
+        if(dataStored == true) snackbarService.Add("설비가 저장되었습니다.", Severity.Info, (options) =>
+        {
+            options.CloseAfterNavigation = true;
+        });
+        else snackbarService.Add($"설비 저장을 실패했습니다: {insertErrMsg}", Severity.Error);
+    }
+
+    private void ResetTextField(){
+        name = string.Empty;
+        location = string.Empty;
+    }
+}
+
